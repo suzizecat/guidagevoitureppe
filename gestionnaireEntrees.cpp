@@ -1,7 +1,9 @@
-#include "gestionnaireEntrees.h"
+#include "gestionnaireEntrees.hpp"
 
-gestionnaireEntrees::gestionnaireEntrees()
+gestionnaireEntrees::gestionnaireEntrees(SDL_Event *evenement, int joystick)
 {
+    event = evenement;
+    numJoystick = joystick;
     reset();
 }
 
@@ -10,18 +12,33 @@ void gestionnaireEntrees::reset()
 {
     for( int i=0; i<SDLK_LAST; i++)
     {
-        touches[i] = false;
+        if(touches.length() <= i)
+            touches << false;
+        else
+            touches[i] = false;
     }
-    for(i=0; i < coordonneesSouris.length(); i++)
+    for(int i=0; i < 4; i++)
     {
-        coordonneesSouris[i] = 0;
+        if(coordonneesSouris.length() <= i)
+            coordonneesSouris << 0;
+        else
+            coordonneesSouris[i] = 0;
     }
+
+    for( int i=0; i<7; i++)
+    {
+        if(boutonsSouris.length() <= i)
+            boutonsSouris << false;
+        else
+            boutonsSouris[i] = false;
+    }
+
 }
 
 void gestionnaireEntrees::update()
 {
-    SDL_Event *event;
-    while(SDL_PollEvent(&event))
+    reset();
+    while(SDL_PollEvent(event))
     {
         switch(event->type)
         {
@@ -31,9 +48,26 @@ void gestionnaireEntrees::update()
         case SDL_KEYUP:
             touches[event->key.keysym.sym] = false;
             break;
-
+        case SDL_MOUSEMOTION:
+            coordonneesSouris[0] = event->motion.x;
+            coordonneesSouris[1] = event->motion.y;
+            coordonneesSouris[2] = event->motion.xrel;
+            coordonneesSouris[3] = event->motion.yrel;
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+            boutonsSouris[event->button.button] = true;
+            break;
+        case SDL_MOUSEBUTTONUP:
+            boutonsSouris[event->button.button] = false;
+            break;
         }
     }
+}
+
+void gestionnaireEntrees::waitForAction()
+{
+    SDL_WaitEvent(event);
+    update();
 }
 
 bool gestionnaireEntrees::getKeyState(int key)
@@ -42,4 +76,16 @@ bool gestionnaireEntrees::getKeyState(int key)
         return touches[key];
     else
         return false;
+}
+bool gestionnaireEntrees::getMouseButtonState(int btn)
+{
+    if(btn < 3)
+        return boutonsSouris[btn];
+    else
+        return false;
+}
+
+QList<int> gestionnaireEntrees::getMousePosition()
+{
+    return coordonneesSouris;
 }

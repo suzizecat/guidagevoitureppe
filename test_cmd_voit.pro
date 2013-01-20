@@ -13,11 +13,13 @@ TEMPLATE = app
 SOURCES += main.cpp\
         principale.cpp \
     fenexec.cpp \
-    gestionAffichage.cpp
+    gestionAffichage.cpp \
+    gestionnaireEntrees.cpp
 
 HEADERS  += principale.hpp \
     fenexec.hpp \
-    gestionAffichage.hpp
+    gestionAffichage.hpp \
+    gestionnaireEntrees.hpp
 
 FORMS    += principale.ui \
     fenexec.ui

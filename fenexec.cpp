@@ -6,13 +6,14 @@ fenExec::fenExec(QWidget *parent, int num) :
 {
     setupUi(this);
     numJoystick = num;
-
     connect(lancerTransmition,SIGNAL(clicked()),this,SLOT(lanceCommande()));
 }
 int fenExec::lanceCommande()
 {
     qDebug() << "Déclaration des variables";
     SDL_Event event;
+    qDebug() << "Génération du gestionnaire d'entrées:\n\tAdresse event: "<< &event;
+    gestionnaireEntrees listeEvents(&event,numJoystick);
     bool continuer = true;
     bool enregistrer = false;
     SDL_Joystick* joystick;
@@ -32,7 +33,7 @@ int fenExec::lanceCommande()
                  << "\tNom :" << SDL_JoystickName(numJoystick) << "\n"
                  << "\tNbre d'axes :" << SDL_JoystickNumAxes(joystick);
         qDebug() << "Activation de la répétition automatique\n\tDélai : 10\n\tIntervale : 100";
-        SDL_EnableKeyRepeat(10,100);
+        //  SDL_EnableKeyRepeat(10,100);
         presenceJoystick = false;
     }
     else
@@ -42,7 +43,7 @@ int fenExec::lanceCommande()
         presenceJoystick = true;
     }
 
-
+    qDebug() << "Event SourisMotion" << SDL_MOUSEMOTION;
 
     qDebug() << "Déclaration des listes";
     QList<QVariant> donnees;
@@ -53,84 +54,63 @@ int fenExec::lanceCommande()
     SDL_JoystickEventState(SDL_ENABLE);
 
     qDebug() << "Desactivation des évenements non utilisés";
-    trieEvenements(true, eventsValides);
+    //trieEvenements(true, eventsValides);
+    //listeEvents.setEvents(eventsValides,true);
 
     qDebug() << "Affichage de la surface SDL";
     SDL_SetVideoMode(640, 480, 32, SDL_HWSURFACE);
 
     qDebug() << "Debut de la boucle";
+
+
     while (continuer)
     {
-        if(! presenceJoystick)
+        SDL_Delay(100);
+        listeEvents.update();
+        if(listeEvents.getLastType() < 20)
         {
-            qDebug() << "Réinit valeurs" << donnees[0].toString() <<" " << donnees[1].toString() <<" " << donnees[2].toInt() <<" " << donnees[3].toInt();
-        if(donnees[D_VAL_X] != 0)
-            donnees[D_VAL_X] = 0;
-
-        if(donnees[D_VAL_Y] != 0)
-            donnees[D_VAL_Y] = 0;
-        }
-        qDebug() << "Attente d'un evenement";
-        do
-        {
-
-            SDL_WaitEvent(&event);
-        }while(event.type == SDL_JOYAXISMOTION && (event.jaxis.value < ZNMORTE && event.jaxis.value > -ZNMORTE));
-        qDebug() << "Evenement !";
-        switch(event.type)
-        {
-        case SDL_QUIT:
-            qDebug() << "\tIcone quitter";
-            continuer = false;
-            break;
-        case SDL_KEYDOWN:
-            qDebug() << "\tTouche clavier";
-            switch(event.key.keysym.sym)
+            if(listeEvents.getQuit() || listeEvents.getKeyState(SDLK_ESCAPE))
             {
-            case SDLK_ESCAPE:
+                qDebug() << "\tFin de la session de test";
                 continuer = false;
-                break;
-            case SDLK_RETURN:
+
+            }
+            if(listeEvents.getKeyState(SDLK_RETURN))
+            {
                 donnees[D_DECLENCHE_ENR] = ! donnees[D_DECLENCHE_ENR].toBool();
-                break;
-            case SDLK_SPACE:
+                listeEvents.setKeyState(SDLK_RETURN,false);
+            }
+            if(listeEvents.getKeyState(SDLK_SPACE))
+            {
                 donnees[D_CHGTMD] = ! donnees[D_CHGTMD].toBool();
-                break;
-                if(! presenceJoystick)
-                {
-            case SDLK_RIGHT:
-                        donnees[D_VAL_X]= JOY_VALMAX;
-                        break;
-                    case SDLK_LEFT:
-                        donnees[D_VAL_X]= -JOY_VALMAX;
-                        break;
-                    case SDLK_UP:
-                        donnees[D_VAL_Y]= JOY_VALMAX;
-                        break;
-                    case SDLK_DOWN:
-                        donnees[D_VAL_Y]= - JOY_VALMAX;
-                        break;
-                }
-            default:
-                break;
+                listeEvents.setKeyState(SDLK_SPACE,false);
             }
-            break;
-        case SDL_JOYAXISMOTION:
-            if(event.jaxis.axis == AXE_X)  // Si déplacement horizontal
+            if(! presenceJoystick)
             {
-                qDebug() << "\tAXE_X";
-                donnees[D_VAL_X] = event.jaxis.value;
+                if(listeEvents.getKeyState(SDLK_UP))
+                    donnees[D_VAL_Y]= JOY_VALMAX;
+                if(listeEvents.getKeyState(SDLK_DOWN))
+                    donnees[D_VAL_Y]= - JOY_VALMAX;
+                if(listeEvents.getKeyState(SDLK_LEFT))
+                    donnees[D_VAL_X]= -JOY_VALMAX;
+                if(listeEvents.getKeyState(SDLK_RIGHT))
+                    donnees[D_VAL_X]= JOY_VALMAX;
+
+                if(listeEvents.getKeyState(SDLK_LEFT) == listeEvents.getKeyState(SDLK_RIGHT))
+                    donnees[D_VAL_X] = 0;
+                if(listeEvents.getKeyState(SDLK_DOWN) == listeEvents.getKeyState(SDLK_UP))
+                    donnees[D_VAL_Y] = 0;
+
             }
-            if(event.jaxis.axis == AXE_Y )
-            {
-                qDebug() << "\tAXE_Y";
-                donnees[D_VAL_Y] = event.jaxis.value;
+            else
+             {
+                donnees[D_VAL_X] = listeEvents.getJoyValue(D_VAL_X);
+                donnees[D_VAL_Y] = -listeEvents.getJoyValue(D_VAL_Y);
             }
-            break;
+
+            qDebug() << event.type <<"\t"<< donnees[0].toInt() <<"\t" << donnees[1].toInt() << "\t" << donnees[2].toInt() <<"\t" << donnees[3].toInt();
 
         }
-        qDebug() << event.type << donnees[0].toString() <<" " << donnees[1].toString() <<" " << donnees[2].toInt() <<" " << donnees[3].toInt();
-
 
 
 
@@ -144,11 +124,11 @@ int fenExec::lanceCommande()
     SDL_Quit();
 }
 
-void fenExec::trieEvenements(bool activer, QList<int> listeDonnees)
+void fenExec::trieEvenements(bool etat, QList<int> events)
 {
     qDebug() << "Selection des evenements a exploiter" ;
-    qDebug() << "\t"<< listeDonnees.count() << " elements passes / 14";
-    if(activer)
+    qDebug() << "\t"<< events.count() << " elements passes / 14";
+    if(etat)
     {
         qDebug() << "\tDesactivation de tous les evenements";
         SDL_EventState(SDL_MOUSEBUTTONDOWN, SDL_IGNORE);
@@ -166,9 +146,10 @@ void fenExec::trieEvenements(bool activer, QList<int> listeDonnees)
         SDL_EventState(SDL_JOYBUTTONUP, SDL_IGNORE);
 
         qDebug() << "\tActivation des elements selectionnes";
-        for(int i = 0; i < listeDonnees.count(); i ++ )
+        for(int i = 0; i < events.count(); i ++ )
         {
-            SDL_EventState(listeDonnees[i], SDL_ENABLE );
+            qDebug() << "\tActivation de l'event " << events[i];
+            SDL_EventState(events[i], SDL_ENABLE );
         }
     }
     else
@@ -189,11 +170,10 @@ void fenExec::trieEvenements(bool activer, QList<int> listeDonnees)
         SDL_EventState(SDL_JOYBUTTONUP,SDL_ENABLE);
 
         qDebug() << "\tDesactivation des elements selectionnes";
-        for(int i = 0; i < listeDonnees.count(); i ++ )
+        for(int i = 0; i < events.count(); i ++ )
         {
-            SDL_EventState(listeDonnees[i], SDL_IGNORE );
+            SDL_EventState(events[i], SDL_IGNORE );
         }
     }
-
 
 }

@@ -2,10 +2,9 @@
 #define FENEXEC_HPP
 
 #include "ui_fenexec.h"
-#include <SDL/SDL.h>
-#include <QList>
+#include "gestionnaireEntrees.hpp"
 #include <QVariant>
-#include <QDebug>
+
 #define AXE_X 0
 #define AXE_Y 1
 #define D_VAL_X 0
@@ -23,8 +22,9 @@ public:
 protected:
     int numJoystick;
     bool presenceJoystick;
-	void trieEvenements(bool,QList<int>);
+    void trieEvenements(bool, QList<int> events);
     QList<int> eventsValides;
+
 protected slots:
     int lanceCommande();
 };
